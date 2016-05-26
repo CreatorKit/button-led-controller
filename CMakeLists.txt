@@ -14,7 +14,6 @@ SET(led_controller_VERSION
 ###################
 SET(CMAKE_VERBOSE_MAKEFILE 1)
 SET(CMAKE_BUILD_TYPE DEBUG) # Options MINSIZEREL, RELEASE, DEBUG
-SET(DOCS_INTERNAL 1 CACHE BOOL "enable internal docs generation")
 
 # Paths
 ########

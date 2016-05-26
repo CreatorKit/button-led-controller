@@ -22,6 +22,9 @@ Prior to running button gateway application, make sure that:
 
 **NOTE:** Please do "ps" on console to see "specific" process is running or not.
 
+## Application flow diagram
+![Led Controller Sequence Diagram](docs/led-controller-seq-diag.png)
+
 ## API guide
 
 Led Controller documentation is available as a Doxygen presentation which is generated via the following process.
@@ -48,28 +51,41 @@ Led Controller Application
 ------------------------
 
 
+Establish server session for port:54321 and address:127.0.0.1
+
 Server session established
 
 
-Defining flow objects on server
+Defining DigitalInput[3200] object on awalwm2m server
 
 Waiting for constrained device 'ButtonDevice' to be up
 
 Constrained device ButtonDevice registered
 
-Button state has changed
+Successfully added observe operation for button object[3200/0/5501]
 
-Going to glow led on Ci40 board
 
-Button state has changed
-
-Going to off led on Ci40 board
+Received observe callback for button object[3200/0/5501] with value 1
 
 Button state has changed
 
-Going to glow led on Ci40 board
+Turn ON led on Ci40 board
+
+Received observe callback for button object[3200/0/5501] with value 0
 
 Button state has changed
 
-Going to off led on Ci40 board
+Turn OFF led on Ci40 board
+
+Received observe callback for button object[3200/0/5501] with value 1
+
+Button state has changed
+
+Turn ON led on Ci40 board
+
+Received observe callback for button object[3200/0/5501] with value 0
+
+Button state has changed
+
+Turn OFF led on Ci40 board
 ```

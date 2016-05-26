@@ -31,7 +31,7 @@
 /**
  * @file led_controller.c
  * @brief Led Controller application at first observes the button presses on constrained device and
- *        set one of the led on present on Ci40 board. It uses AwaDeviceManagment Server SDK for
+ *        set one of the led on present on Ci40 board. It uses AwaLWM2M Server SDK for
  *        communicating with awalwm2m client on constrained device.
  */
 
@@ -173,7 +173,7 @@ static void UpdateLed(bool status, bool isHeartbeat)
 
     if (tmp != 0)
     {
-        LOG(LOG_WARN, "Setting heartbeat led failed.");
+        LOG(LOG_WARN, "Setting led failed.");
     }
 }
 
@@ -247,12 +247,12 @@ void PerformUpdate(bool buttonState)
 {
     if (buttonState)
     {
-        LOG(LOG_INFO, "Going to glow led on Ci40 board");
+        LOG(LOG_INFO, "Turn ON led on Ci40 board");
         UpdateLed(true, false);
     }
     else
     {
-        LOG(LOG_INFO, "Going to off led on Ci40 board");
+        LOG(LOG_INFO, "Turn OFF led on Ci40 board");
         UpdateLed(false, false);
     }
 }
@@ -270,7 +270,7 @@ void ObserveCallback(const AwaChangeSet *changeSet, void *context)
 
     if (AwaAPI_MakeResourcePath(path, URL_PATH_SIZE, BUTTON_OBJECT_ID, 0, BUTTON_RESOURCE_ID) != AwaError_Success)
     {
-        LOG(LOG_INFO, "Couldn't generate all object and resource paths.\n");
+        LOG(LOG_INFO, "Couldn't generate all object and resource paths.");
     }
 
     if (path != NULL)
@@ -284,6 +284,7 @@ void ObserveCallback(const AwaChangeSet *changeSet, void *context)
         if (AwaChangeSet_GetValueAsIntegerPointer(changeSet, path, &value) == AwaError_Success)
         {
             buttonState = *value % 2;
+            LOG(LOG_INFO, "Received observe callback for button object[%d/0/%d] with value %d", BUTTON_OBJECT_ID, BUTTON_RESOURCE_ID, buttonState);
         }
     }
 }
@@ -308,7 +309,7 @@ static bool StartObservingButton(const AwaServerSession *session)
 
     if (AwaAPI_MakeResourcePath(buttonResourcePath, URL_PATH_SIZE, BUTTON_OBJECT_ID, 0, BUTTON_RESOURCE_ID) != AwaError_Success)
     {
-        LOG(LOG_INFO, "Couldn't generate all object and resource paths.\n");
+        LOG(LOG_INFO, "Couldn't generate all object and resource paths");
         return false;
     }
 
@@ -338,6 +339,8 @@ static bool StartObservingButton(const AwaServerSession *session)
         LOG(LOG_ERR, "AwaServerObserveResponse_GetPathResult failed\n");
         return false;
     }
+
+    LOG(LOG_INFO, "Successfully added observe operation for button object[%d/0/%d]", BUTTON_OBJECT_ID, BUTTON_RESOURCE_ID);
 
     AwaServerObserveOperation_Free(&operation);
 
@@ -466,8 +469,6 @@ bool DefineServerObjects(AwaServerSession *session)
     unsigned int definitionCount = 0;
     bool result = true;
 
-    LOG(LOG_INFO, "Defining flow objects on server");
-
     if (session == NULL)
     {
         LOG(LOG_ERR, "Null parameter passsed to %s()", __func__);
@@ -483,9 +484,11 @@ bool DefineServerObjects(AwaServerSession *session)
 
     for (i = 0; (i < ARRAY_SIZE(objects)) && result; i++)
     {
+        LOG(LOG_INFO, "Defining %s[%d] object on awalwm2m server", objects[i].name, objects[i].id);
+
         if (AwaServerSession_IsObjectDefined(session, objects[i].id))
         {
-            LOG(LOG_DBG, "%s object already defined on server", objects[i].name);
+            LOG(LOG_DBG, "%s[%d] object already defined on server", objects[i].name, objects[i].id);
             continue;
         }
 
@@ -529,6 +532,8 @@ AwaServerSession *Server_EstablishSession(unsigned int port, const char *address
     /* Initialise Device Management session */
     AwaServerSession * session;
     session = AwaServerSession_New();
+
+    LOG(LOG_INFO, "Establish server session for port:%u and address:%s", port, address);
 
     if (session != NULL)
     {
