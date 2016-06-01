@@ -87,7 +87,7 @@ typedef struct
     AwaResourceType type; /**< type of resource e.g. bool, string, integer etc. */
     const char *name; /**< resource name */
     /*@}*/
-}RESOURCE_T;
+}Resource;
 
 /**
  * A structure to contain objects information.
@@ -100,23 +100,25 @@ typedef struct
     AwaObjectInstanceID instanceID; /**< object instance ID */
     const char *name; /**< object name */
     unsigned int numResources; /**< number of resource under this object */
-    RESOURCE_T *resources; /**< resource information */
+    Resource *resources; /**< resource information */
     /*@}*/
-}OBJECT_T;
+}Object;
 
 /***************************************************************************************************
  * Globals
  **************************************************************************************************/
 
 /** Set default debug level to info. */
-int debugLevel = LOG_INFO;
+int g_debugLevel = LOG_INFO;
 /** Set default debug stream to NULL. */
-FILE *debugStream = NULL;
+FILE *g_debugStream = NULL;
 /** Button state on button constrained device. */
-bool buttonState = false;
+bool g_buttonState = false;
+/** Global variable for signal handling. */
+static volatile int g_quit = 0;
 
 /** Initializing objects. */
-static OBJECT_T objects[] =
+static Object objects[] =
 {
     {
         BUTTON_DEVICE_STR,
@@ -124,7 +126,7 @@ static OBJECT_T objects[] =
         0,
         "DigitalInput",
         1,
-        (RESOURCE_T []){
+        (Resource []){
                             {
                                 BUTTON_RESOURCE_ID,
                                 0,
@@ -138,6 +140,16 @@ static OBJECT_T objects[] =
 /***************************************************************************************************
  * Implementation
  **************************************************************************************************/
+
+/**
+ * @brief Signal handler for segfault and Ctrl-C handling.
+ * @param dummy dummy variable
+ */
+static void CtrlCSignalHandler(int dummy)
+{
+    LOG(LOG_INFO, "Exit triggered");
+    g_quit = 1;
+}
 
 /**
  * @brief Update heartbeat led status to on/off.
@@ -218,7 +230,7 @@ static int ParseCommandArgs(int argc, char *argv[], const char **fptr)
                 tmp = strtoul(optarg, NULL, 0);
                 if (tmp >= LOG_FATAL && tmp <= LOG_DBG)
                 {
-                    debugLevel = tmp;
+                    g_debugLevel = tmp;
                 }
                 else
                 {
@@ -283,8 +295,8 @@ void ObserveCallback(const AwaChangeSet *changeSet, void *context)
 
         if (AwaChangeSet_GetValueAsIntegerPointer(changeSet, path, &value) == AwaError_Success)
         {
-            buttonState = *value % 2;
-            LOG(LOG_INFO, "Received observe callback for button object[%d/0/%d] with value %d", BUTTON_OBJECT_ID, BUTTON_RESOURCE_ID, buttonState);
+            g_buttonState = *value % 2;
+            LOG(LOG_INFO, "Received observe callback for button object[%d/0/%d] with value %d", BUTTON_OBJECT_ID, BUTTON_RESOURCE_ID, g_buttonState);
         }
     }
 }
@@ -299,6 +311,7 @@ static bool StartObservingButton(const AwaServerSession *session)
     AwaServerObserveOperation *operation = NULL;
     char buttonResourcePath[URL_PATH_SIZE] = {0};
     const AwaPathResult *pathResult = NULL;
+    bool result = true;
 
     operation = AwaServerObserveOperation_New(session);
     if (operation == NULL)
@@ -320,31 +333,31 @@ static bool StartObservingButton(const AwaServerSession *session)
         if (AwaServerObserveOperation_AddObservation(operation, observation) != AwaError_Success)
         {
             LOG(LOG_ERR, "AwaServerObserveOperation_AddObservation failed");
-            return false;
+            result = false;
         }
+
+        if (AwaServerObserveOperation_Perform(operation, OPERATION_TIMEOUT) != AwaError_Success)
+        {
+            LOG(LOG_ERR, "Failed to perform observe operation");
+            result = false;
+        }
+
+        const AwaServerObserveResponse *response = NULL;
+        response = AwaServerObserveOperation_GetResponse(operation, BUTTON_DEVICE_STR);
+
+        pathResult = AwaServerObserveResponse_GetPathResult(response, buttonResourcePath);
+        if (AwaPathResult_GetError(pathResult) != AwaError_Success)
+        {
+            LOG(LOG_ERR, "AwaServerObserveResponse_GetPathResult failed\n");
+            result = false;
+        }
+
+        LOG(LOG_INFO, "Successfully added observe operation for button object[%d/0/%d]", BUTTON_OBJECT_ID, BUTTON_RESOURCE_ID);
+
+        AwaServerObserveOperation_Free(&operation);
     }
 
-    if (AwaServerObserveOperation_Perform(operation, OPERATION_TIMEOUT) != AwaError_Success)
-    {
-        LOG(LOG_ERR, "Failed to perform observe operation");
-        return false;
-    }
-
-    const AwaServerObserveResponse *response = NULL;
-    response = AwaServerObserveOperation_GetResponse(operation, BUTTON_DEVICE_STR);
-
-    pathResult = AwaServerObserveResponse_GetPathResult(response, buttonResourcePath);
-    if (AwaPathResult_GetError(pathResult) != AwaError_Success)
-    {
-        LOG(LOG_ERR, "AwaServerObserveResponse_GetPathResult failed\n");
-        return false;
-    }
-
-    LOG(LOG_INFO, "Successfully added observe operation for button object[%d/0/%d]", BUTTON_OBJECT_ID, BUTTON_RESOURCE_ID);
-
-    AwaServerObserveOperation_Free(&operation);
-
-    return true;
+    return result;
 }
 
 /**
@@ -408,7 +421,7 @@ static bool CheckConstrainedRegistered(const AwaServerSession *session, const ch
  * @param *object whose resources are to be defined.
  * @return pointer to flow object definition.
  */
-static AwaObjectDefinition *AddResourceDefinitions(OBJECT_T *object)
+static AwaObjectDefinition *AddResourceDefinitions(Object *object)
 {
     int i;
 
@@ -579,12 +592,15 @@ int main(int argc, char **argv)
         return ret;
     }
 
+    signal(SIGINT, CtrlCSignalHandler);
+    signal(SIGTERM, CtrlCSignalHandler);
+
     if (fptr)
     {
         configFile = fopen(fptr, "w");
         if (configFile != NULL)
         {
-            debugStream  = configFile;
+            g_debugStream  = configFile;
         }
         else
         {
@@ -616,8 +632,8 @@ int main(int argc, char **argv)
 
         if (StartObservingButton(serverSession))
         {
-            bool cachedButtonState = buttonState;
-            while(true)
+            bool cachedButtonState = g_buttonState;
+            while(!g_quit)
             {
                 UpdateLed(false, true);
                 if (AwaServerSession_Process(serverSession, 1000 /* 1 second */) != AwaError_Success)
@@ -628,11 +644,11 @@ int main(int argc, char **argv)
                 AwaServerSession_DispatchCallbacks(serverSession);
 
                 /* Check if button state is changed */
-                if (buttonState != cachedButtonState)
+                if (g_buttonState != cachedButtonState)
                 {
                     LOG(LOG_INFO, "Button state has changed");
-                    PerformUpdate(buttonState);
-                    cachedButtonState = buttonState;
+                    PerformUpdate(g_buttonState);
+                    cachedButtonState = g_buttonState;
                 }
                 UpdateLed(true, true);
             }
@@ -645,6 +661,11 @@ int main(int argc, char **argv)
 
     /* Should never come here */
     UpdateLed(false, true);
+
+    if (configFile)
+    {
+        fclose(configFile);
+    }
 
     if (AwaServerSession_Disconnect(serverSession) != AwaError_Success)
     {
