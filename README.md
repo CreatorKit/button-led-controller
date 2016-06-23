@@ -11,7 +11,7 @@ Led controller application runs on Ci40 board. One MikroE board acts as awalwm2m
 | "Digital Input" | 3200           | "Counter"      | 5501        |
 
 ## Prerequisites
-Prior to running button gateway application, make sure that:
+Prior to running led controller application, make sure that:
 - Awalwm2m server daemon(awa_serverd) is running.
 - Awalwm2m bootstrap daemon(awa_bootstrapd) is running.
 
@@ -37,7 +37,7 @@ The output can be found in the build/html directory and viewed by opening index.
 ## Running Application on Ci40 board
 Led Controller Application is getting started as a daemon. Although we could also start it from the command line as :
 
-*$ led_controller*
+*$ led_controller_appd*
 
 Output looks something similar to this :
 ```
