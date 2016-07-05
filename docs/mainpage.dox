@@ -1,7 +1,7 @@
-/** @mainpage Led Controller application
+/** @mainpage Button-Led Controller application
 @section overview Overview
 
-Led controller application runs on Ci40 board.
+Button-Led controller application runs on Ci40 board.
 
 One MikroE board acts as awalwm2m client to simulate button. Controller application acts as awalwm2m server and observes any button presses on MikroE board, and whenever there is a change, controller gets a notification for the same, and change led state to ON or OFF present on Ci40 board.
  */
