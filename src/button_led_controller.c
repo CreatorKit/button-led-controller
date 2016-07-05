@@ -29,8 +29,8 @@
  */
 
 /**
- * @file led_controller.c
- * @brief Led Controller application at first observes the button presses on constrained device and
+ * @file button_led_controller.c
+ * @brief Button-Led Controller application at first observes the button presses on constrained device and
  *        set one of the led on present on Ci40 board. It uses AwaLWM2M Server SDK for
  *        communicating with awalwm2m client on constrained device.
  */
@@ -190,7 +190,7 @@ static void UpdateLed(bool status, bool isHeartbeat)
 }
 
 /**
- * @brief Prints led_controller_appd usage.
+ * @brief Prints button_led_controller_appd usage.
  * @param *program holds application name.
  */
 static void PrintUsage(const char *program)
@@ -205,7 +205,7 @@ static void PrintUsage(const char *program)
 }
 
 /**
- * @brief Parses command line arguments passed to led_controller_appd.
+ * @brief Parses command line arguments passed to button_led_controller_appd.
  * @return -1 in case of failure, 0 for printing help and exit, and 1 for success.
  */
 static int ParseCommandArgs(int argc, char *argv[], const char **fptr)
@@ -610,7 +610,7 @@ int main(int argc, char **argv)
 
     AwaServerSession *serverSession = NULL;
 
-    LOG(LOG_INFO, "Led Controller Application");
+    LOG(LOG_INFO, "Button-Led Controller Application");
     LOG(LOG_INFO, "------------------------\n");
 
     serverSession = Server_EstablishSession(IPC_SERVER_PORT, IP_ADDRESS);
@@ -677,7 +677,7 @@ int main(int argc, char **argv)
         LOG(LOG_WARN, "Failed to free server session");
     }
 
-    LOG(LOG_INFO, "Led Controller Application Failure");
+    LOG(LOG_INFO, "Button-Led Controller Application Failure");
 
     return -1;
 }

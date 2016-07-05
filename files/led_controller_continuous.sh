@@ -30,10 +30,10 @@
 
 while true
 do
-    line=$(ps | grep 'led_controller_appd' | grep -v grep)
+    line=$(ps | grep 'button_led_controller_appd' | grep -v grep)
     if [ -z "$line" ]
     then
-        /etc/init.d/led_controller_appd start
+        /etc/init.d/button_led_controller_appd start
     else
         sleep 5
     fi
